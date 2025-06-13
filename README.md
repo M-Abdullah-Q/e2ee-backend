@@ -1,4 +1,4 @@
-# etee
+# e2ee
 
 To install dependencies:
 
