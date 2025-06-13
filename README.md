@@ -30,7 +30,7 @@ A **full-stack end-to-end encrypted** messaging backend built with **Bun**, **Ho
 
 ## 📐 Architecture Overview
 
-````mermaid
+```mermaid
 flowchart LR
 
   subgraph Client
@@ -86,8 +86,7 @@ flowchart LR
   Y <-->|Bi-Directional lookup|X
 
   X <-->|Bi-Directional updates| Y
-
-  ```
+```
 
 - **Key Exchange**: `/keys/:username` returns a user’s public key.
 - **Conversations**: One-to-one chats stored in `Conversation` table (unique `(user1Id, user2Id)`).
@@ -103,7 +102,7 @@ flowchart LR
 git clone https://github.com/you/e2ee-backend.git
 cd e2ee-backend
 bun install
-````
+```
 
 ### 2. Environment
 
