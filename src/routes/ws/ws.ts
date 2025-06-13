@@ -10,16 +10,30 @@ import {
 } from "./connections";
 import type { BinaryType, ServerWebSocket, WebSocket } from "bun";
 import { postMessage } from "../../lib/message";
+import { verify } from "hono/jwt";
 
-// 1) Create the upgrade helper and websocket export
+const JWT_SECRET = process.env.JWT_SECRET!;
+
 const { upgradeWebSocket, websocket } = createBunWebSocket<ServerWebSocket>();
 
 export function wsHandler(c: Context) {
   let userId: string;
 
   return {
-    onOpen(evt: Event, ws: WSContext<ServerWebSocket>) {
+    async onOpen(evt: Event, ws: WSContext<ServerWebSocket>) {
       const url = new URL(c.req.url);
+      //auth
+      const token = url.searchParams.get("token");
+      if (!token) {
+        ws.close(1008, "Unsuccessful Authorization");
+        return;
+      }
+      try {
+        const payload = await verify(token, JWT_SECRET);
+      } catch (e) {
+        ws.close(1008, "Invalid or Expired Token");
+      }
+      //id
       const userIdparam = url.searchParams.get("userId");
       if (!userIdparam) {
         ws.close(1008, "Missing useId");
@@ -52,7 +66,7 @@ export function wsHandler(c: Context) {
           // { type: "message", conversationId, recipientId, ciphertext }
           const { conversationId, recipientId, ciphertext } = data;
 
-          // 1. forward immediately if online
+          // 1. forward if online
           const recip = getUserSocket(recipientId);
           if (recip) {
             recip.send(
