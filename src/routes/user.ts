@@ -37,9 +37,9 @@ userRoute.get("/search/:key", authMiddleware, async (c) => {
           { email: { contains: key, mode: "insensitive" } },
         ],
       },
-      select: { id: true, username: true, email: true },
+      select: { id: true, username: true },
     });
-    return c.json({ users });
+    return c.json({ users }, 200);
   } catch (error) {
     console.error("Error searching users:", error);
     return c.json({ error: "Internal server error" }, 500);
@@ -56,7 +56,8 @@ userRoute.post(
       username: z.string(),
     });
     const parsed = schema.safeParse(value);
-    if (!parsed.success) return c.json({ error: "Invalid inputs" }, 401);
+    if (!parsed.success)
+      return c.json({ success: false, error: "Invalid inputs" }, 401);
     return parsed.data;
   }),
   async (c) => {
@@ -70,14 +71,16 @@ userRoute.post(
       const token = await sign({ id: user.id }, JWT_SECRET);
 
       return c.json({
+        success: true,
         email,
         username,
         token,
+        userID: user.id,
         message: "User created successfully",
       });
     } catch (error) {
       console.error(error);
-      return c.json({ error: "User creation failed" }, 500);
+      return c.json({ success: false, error: "User creation failed" }, 500);
     }
   }
 );
@@ -90,7 +93,8 @@ userRoute.post(
       password: z.string(),
     });
     const parsed = schema.safeParse(value);
-    if (!parsed.success) return c.json({ error: "Invalid inputs" }, 401);
+    if (!parsed.success)
+      return c.json({ success: false, error: "Invalid inputs" }, 401);
     return parsed.data;
   }),
   async (c) => {
@@ -102,7 +106,8 @@ userRoute.post(
         },
       });
 
-      if (!user) return c.json({ error: "User Not found" }, 404);
+      if (!user)
+        return c.json({ success: false, error: "User Not found" }, 404);
 
       const isPasswordValid = await bcrypt.compare(
         inputPassword,
@@ -114,14 +119,14 @@ userRoute.post(
       const token = await sign({ id: user.id }, JWT_SECRET);
 
       return c.json({
-        message: "Signin successful",
+        success: true,
         email: user.email,
         username: user.username,
         token,
       });
     } catch (error) {
       console.error(error);
-      return c.json({ error: "Internal server error" }, 500);
+      return c.json({ success: false, error: "Internal server error" }, 500);
     }
   }
 );
