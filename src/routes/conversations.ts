@@ -21,7 +21,7 @@ conversationRoute.post(
     });
     const parsed = schema.safeParse(value);
     if (!parsed.success) {
-      return c.json({ error: "Invalid Request" }, 401);
+      return c.json({ error: "Invalid Request" }, 422);
     }
     return parsed.data;
   }),
@@ -78,6 +78,36 @@ conversationRoute.post(
       );
     } catch (error) {
       console.error("Error creating conversation:", error);
+      return c.json({ error: "Internal server error" }, 500);
+    }
+  }
+);
+
+conversationRoute.get(
+  "/data",
+  authMiddleware,
+  validator("query", (value, c) => {
+    const schema = z.object({
+      conversationId: z.string().uuid(),
+    });
+    const parsed = schema.safeParse(value);
+    if (!parsed.success) {
+      return c.json({ error: "Invalid conversationId" }, 400);
+    }
+    return parsed.data;
+  }),
+  async (c) => {
+    const { conversationId } = c.req.valid("query");
+    try {
+      const messages = await prisma.message.findMany({
+        where: { id: conversationId },
+      });
+      if (!messages) {
+        return c.json({ error: "Conversation not found" }, 404);
+      }
+      return c.json({ messages }, 200);
+    } catch (error) {
+      console.error("Error fetching conversation:", error);
       return c.json({ error: "Internal server error" }, 500);
     }
   }

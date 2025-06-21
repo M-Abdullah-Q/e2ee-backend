@@ -91,6 +91,7 @@ userRoute.post(
     const schema = z.object({
       emailOrUsername: z.string(),
       password: z.string(),
+      publicKey: z.string(),
     });
     const parsed = schema.safeParse(value);
     if (!parsed.success)
@@ -98,7 +99,7 @@ userRoute.post(
     return parsed.data;
   }),
   async (c) => {
-    const { emailOrUsername, password: inputPassword } = c.req.valid("json");
+    const { emailOrUsername, password, publicKey } = c.req.valid("json");
     try {
       const user = await prisma.user.findFirst({
         where: {
@@ -109,19 +110,27 @@ userRoute.post(
       if (!user)
         return c.json({ success: false, error: "User Not found" }, 404);
 
-      const isPasswordValid = await bcrypt.compare(
-        inputPassword,
-        user.password
-      );
+      const isPasswordValid = await bcrypt.compare(password, user.password);
       if (!isPasswordValid)
         return c.json({ error: "Invalid credentials" }, 401);
+
+      const newUser = await prisma.user.update({
+        where: {
+          id: user.id,
+        },
+        data: {
+          publicKey: publicKey,
+        },
+      });
 
       const token = await sign({ id: user.id }, JWT_SECRET);
 
       return c.json({
         success: true,
-        email: user.email,
-        username: user.username,
+        userId: newUser.id,
+        email: newUser.email,
+        username: newUser.username,
+        publicKey: newUser.publicKey,
         token,
       });
     } catch (error) {
